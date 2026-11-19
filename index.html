@@ -1,430 +1,309 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#030814">
-  <meta name="description" content="一棵会生长、闪烁、飘雪的蓝绿色粒子圣诞树。拖动旋转，许下心愿。">
-  <title>星愿圣诞树 · A Little Christmas Magic</title>
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body {
-      width: 100%; height: 100%; margin: 0; overflow: hidden;
-      background: #030814; color: #f5f0df;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    body { position: fixed; inset: 0; touch-action: none; user-select: none; }
-    #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-    .ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
-    .heading {
-      position: absolute; top: max(27px, env(safe-area-inset-top)); left: 0; right: 0;
-      text-align: center; letter-spacing: .34em; padding-left: .34em;
-      color: rgba(180, 222, 213, .72); font-size: 10px; font-weight: 500;
-      text-shadow: 0 0 18px rgba(72, 219, 194, .3);
-    }
-    .heading strong {
-      display: block; margin-top: 10px; font-family: Georgia, serif;
-      font-size: clamp(19px, 5vw, 27px); letter-spacing: .23em; padding-left: .23em;
-      font-weight: 400; color: #f5e9c7;
-      text-shadow: 0 0 22px rgba(248, 206, 126, .23);
-    }
-    .footer {
-      position: absolute; bottom: max(27px, env(safe-area-inset-bottom));
-      left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 12px;
-      pointer-events: auto;
-    }
-    #wishButton {
-      appearance: none; border: 1px solid rgba(232, 197, 123, .65);
-      color: #f6e5b9; background: linear-gradient(135deg, rgba(17, 54, 59, .88), rgba(8, 22, 37, .92));
-      border-radius: 999px; padding: 13px 29px; min-width: 174px;
-      font-size: 14px; letter-spacing: .16em; cursor: pointer;
-      box-shadow: 0 0 24px rgba(58, 197, 171, .12), inset 0 0 16px rgba(255, 220, 150, .05);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
-    }
-    #wishButton:active { transform: scale(.96); box-shadow: 0 0 32px rgba(255, 205, 112, .28); }
-    .hint { margin: 0; color: rgba(183, 207, 203, .62); font-size: 11px; letter-spacing: .12em; }
-    .toast {
-      position: absolute; left: 50%; bottom: max(100px, calc(env(safe-area-inset-bottom) + 92px));
-      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
-      padding: 10px 18px; border: 1px solid rgba(234, 202, 135, .28);
-      border-radius: 999px; color: #f7e7c1; background: rgba(5, 22, 31, .82);
-      font-size: 12px; letter-spacing: .08em; white-space: nowrap;
-      box-shadow: 0 0 28px rgba(255, 196, 104, .12);
-      transition: opacity .35s ease, transform .35s ease;
-    }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
-    .signature {
-      position: absolute; bottom: max(9px, env(safe-area-inset-bottom));
-      color: rgba(106, 153, 151, .34); font: 9px Georgia, serif; letter-spacing: .2em;
-    }
-    @media (max-height: 690px) {
-      .heading { top: max(15px, env(safe-area-inset-top)); }
-      .heading strong { margin-top: 6px; }
-      .footer { bottom: max(13px, env(safe-area-inset-bottom)); gap: 7px; }
-      #wishButton { padding: 10px 24px; }
-      .hint { font-size: 10px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#030814">
+<meta name="description" content="打开一份来自冬夜的圣诞惊喜。极光、飘雪、星愿与专属礼物卡。">
+<title>星愿圣诞礼物屋 · Christmas Magic</title>
+<style>
+:root{color-scheme:dark;--gold:#f4d18b;--mint:#9cebd7;--glass:rgba(5,19,32,.72)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#030814;color:#f6f0e2;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-tap-highlight-color:transparent}
+body{position:fixed;inset:0;user-select:none}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:0;right:0;text-align:center;pointer-events:none;padding:0 12px;text-shadow:0 0 22px rgba(94,224,202,.25)}
+.kicker{font:10px Georgia,serif;letter-spacing:.34em;color:rgba(177,224,213,.72)}
+h1{margin:8px 0 0;font:normal clamp(21px,5.6vw,30px) Georgia,serif;letter-spacing:.2em;color:#f6e9c9;text-shadow:0 0 24px rgba(246,205,127,.22)}
+.countdown{margin-top:9px;color:rgba(244,225,184,.76);font-size:11px;letter-spacing:.08em}
+.star-count{margin-top:6px;color:rgba(160,220,205,.7);font-size:10px;letter-spacing:.12em}
+.dock{position:absolute;z-index:3;left:0;right:0;bottom:max(15px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:9px;padding:0 12px;pointer-events:none}
+.dock-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:7px;pointer-events:auto}
+.action{appearance:none;border:1px solid rgba(184,220,208,.27);border-radius:999px;padding:10px 13px;color:#eaf2e9;background:rgba(5,23,34,.76);font-size:12px;letter-spacing:.04em;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 5px 22px rgba(0,0,0,.16);cursor:pointer}
+.action:active,.primary:active{transform:scale(.96)}
+.action.primary{border-color:rgba(235,198,124,.68);padding:12px 20px;color:#f7e6bd;background:linear-gradient(135deg,rgba(22,68,67,.94),rgba(8,23,38,.96));font-size:13px;letter-spacing:.12em;box-shadow:0 0 24px rgba(67,208,179,.12),inset 0 0 18px rgba(255,220,150,.06)}
+.hint{margin:0;color:rgba(190,216,208,.58);font-size:10px;letter-spacing:.1em;text-align:center}
+.toast{position:absolute;z-index:20;left:50%;bottom:max(112px,calc(env(safe-area-inset-bottom) + 105px));transform:translate(-50%,12px);opacity:0;pointer-events:none;padding:10px 17px;border:1px solid rgba(234,202,135,.3);border-radius:999px;color:#f7e7c1;background:rgba(5,22,31,.9);font-size:12px;white-space:nowrap;box-shadow:0 0 28px rgba(255,196,104,.12);transition:opacity .3s,transform .3s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.signature{position:absolute;bottom:max(5px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:rgba(106,153,151,.32);font:9px Georgia,serif;letter-spacing:.2em;pointer-events:none}
+.panel{position:absolute;z-index:8;left:50%;bottom:max(118px,calc(env(safe-area-inset-bottom) + 112px));transform:translate(-50%,12px);width:min(92vw,360px);padding:17px;border:1px solid rgba(224,204,151,.28);border-radius:20px;color:#eef4e9;background:rgba(4,17,29,.94);box-shadow:0 18px 55px rgba(0,0,0,.42),0 0 32px rgba(68,205,181,.12);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,transform .22s,visibility .22s}
+.panel.open{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;font-size:14px;letter-spacing:.12em;color:#f4e4bd}
+.close{border:0;color:#c8d9d0;background:transparent;font-size:24px;cursor:pointer}
+.label{display:flex;justify-content:space-between;gap:10px;margin:12px 0 8px;color:rgba(223,239,232,.78);font-size:12px}
+.theme-row{display:flex;gap:8px}
+.theme-btn{flex:1;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 3px;color:#f2eee1;background:rgba(255,255,255,.06);font-size:11px;cursor:pointer}
+.theme-btn.active{border-color:#e9ca83;background:rgba(220,184,106,.16)}
+.dot{display:block;width:20px;height:20px;margin:0 auto 5px;border-radius:50%;box-shadow:0 0 12px currentColor}
+input[type=range]{width:100%;accent-color:#e7c477}
+.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+.panel-action{border:1px solid rgba(185,218,207,.2);border-radius:11px;padding:10px 7px;color:#e7eee5;background:rgba(255,255,255,.055);font-size:12px;cursor:pointer}
+.overlay{position:absolute;z-index:10;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(2,9,18,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s,visibility .35s}
+.overlay.open{opacity:1;visibility:visible;pointer-events:auto}
+.intro{z-index:30;background:radial-gradient(ellipse at 50% 45%,rgba(20,99,91,.32),transparent 48%),linear-gradient(180deg,rgba(2,8,18,.96),rgba(4,19,30,.96))}
+.intro-card{text-align:center;width:min(100%,390px);padding:28px 20px}
+.intro-star{font-size:54px;color:#f5d68f;text-shadow:0 0 28px rgba(255,209,122,.65);animation:starPulse 2.5s ease-in-out infinite}
+@keyframes starPulse{50%{transform:scale(1.13);filter:drop-shadow(0 0 18px #e9bd70)}}
+.intro-kicker{margin-top:18px;color:#9bd9ca;font:10px Georgia,serif;letter-spacing:.34em}
+.intro-title{margin:12px 0;color:#f6e7c4;font:normal clamp(28px,8vw,40px) Georgia,serif;letter-spacing:.12em}
+.intro-copy{margin:0 auto 23px;max-width:290px;color:rgba(217,232,220,.72);font-size:13px;line-height:1.9}
+.primary{border:1px solid rgba(237,201,128,.72);border-radius:999px;padding:13px 28px;color:#f7e6bd;background:linear-gradient(135deg,#174b4b,#0a1e31);font-size:13px;letter-spacing:.14em;box-shadow:0 0 28px rgba(79,208,179,.15);cursor:pointer;transition:transform .2s}
+.dialog{position:relative;width:min(100%,410px);max-height:min(86vh,740px);overflow:auto;padding:24px 20px 20px;border:1px solid rgba(238,204,132,.4);border-radius:23px;background:radial-gradient(circle at 50% 0%,rgba(51,112,104,.42),transparent 48%),linear-gradient(150deg,#102c36,#071522 72%);box-shadow:0 20px 70px rgba(0,0,0,.5),0 0 34px rgba(237,190,109,.1);scrollbar-width:thin}
+.dialog-close{position:absolute;top:10px;right:14px;border:0;color:#c8d9d0;background:transparent;font-size:25px;cursor:pointer}
+.dialog-kicker{text-align:center;color:rgba(177,223,209,.7);font:9px Georgia,serif;letter-spacing:.28em}
+.dialog h2{margin:8px 0;text-align:center;color:#f5e4bc;font:normal 25px Georgia,serif;letter-spacing:.08em}
+.dialog-sub{text-align:center;color:rgba(220,233,222,.68);font-size:12px;line-height:1.7}
+.gift-stage{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px}
+.gift-box{position:relative;width:116px;height:91px;margin:26px auto 22px;border-radius:7px;background:linear-gradient(135deg,#b92f43,#762032);box-shadow:inset -9px -7px 15px rgba(0,0,0,.18),0 13px 28px rgba(0,0,0,.3);animation:giftFloat 2.7s ease-in-out infinite}
+.gift-box:before{content:"";position:absolute;left:47px;top:0;width:22px;height:100%;background:linear-gradient(90deg,#e7c878,#fff0b2,#c79a4e)}
+.gift-box:after{content:"";position:absolute;left:0;top:31px;width:100%;height:18px;background:linear-gradient(180deg,#e7c878,#bd9148)}
+.gift-lid{position:absolute;z-index:2;left:-9px;top:-17px;width:134px;height:24px;border-radius:5px;background:linear-gradient(180deg,#e34b5b,#9d263b);box-shadow:0 5px 9px rgba(0,0,0,.22);transform-origin:10% 100%;transition:transform .55s ease}
+.gift-lid:before{content:"";position:absolute;left:56px;top:0;width:22px;height:100%;background:linear-gradient(90deg,#e7c878,#fff0b2,#c79a4e)}
+.gift-bow{position:absolute;z-index:3;left:42px;top:-34px;width:33px;height:22px;border:7px solid #e7c878;border-radius:80% 20% 70% 20%;transform:rotate(12deg)}
+.gift-box.opened .gift-lid{transform:translate(-22px,-36px) rotate(-27deg)}
+.gift-box.opened{animation:giftBurst .65s ease}
+@keyframes giftFloat{50%{transform:translateY(-7px)}}
+@keyframes giftBurst{35%{filter:brightness(1.6);transform:scale(1.07)}}
+.letter{margin-top:12px;padding:18px 15px;border:1px dashed rgba(230,196,124,.42);border-radius:14px;background:rgba(255,255,255,.035);text-align:center}
+.letter-to{color:#e9c98e;font-size:12px;letter-spacing:.08em}
+.letter-message{margin:13px 0;color:#f2e6c9;font:15px/1.95 Georgia,"Songti SC",serif;white-space:pre-wrap;overflow-wrap:anywhere}
+.letter-from{color:rgba(183,220,205,.78);font-size:12px;text-align:right}
+.dialog-actions{display:flex;gap:8px;margin-top:16px}
+.dialog-actions button{flex:1;min-width:0;padding:11px 8px;font-size:12px}
+.field-label{display:block;margin:13px 0 6px;color:rgba(223,237,225,.78);font-size:12px}
+.field{width:100%;border:1px solid rgba(192,218,205,.22);border-radius:11px;padding:11px 12px;outline:none;color:#f5f0df;background:rgba(0,0,0,.2);font:13px inherit}
+.field:focus{border-color:rgba(234,200,127,.7)}
+textarea.field{min-height:88px;resize:vertical;line-height:1.65}
+.preview{margin-top:12px;padding:12px;border:1px dashed rgba(230,196,124,.35);border-radius:12px;color:#f1dfb4;text-align:center;font:14px/1.8 Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere}
+.share-url{margin-top:10px;font-size:11px;color:#a9d9cc;overflow-wrap:anywhere;user-select:text}
+.hidden{display:none!important}
+@media(max-width:420px){.action{padding:9px 10px;font-size:11px}.dock{gap:7px}.panel{bottom:max(126px,calc(env(safe-area-inset-bottom) + 120px))}.dialog{padding:22px 16px 17px}}
+@media(max-height:690px){.hud{top:max(10px,env(safe-area-inset-top))}.countdown{margin-top:5px}.dock{bottom:max(8px,env(safe-area-inset-bottom));gap:5px}.action{padding:8px 10px}.hint{font-size:9px}.panel{bottom:max(105px,calc(env(safe-area-inset-bottom) + 100px))}}
+</style>
 </head>
 <body>
-  <canvas id="scene" aria-label="蓝绿色粒子圣诞树动画"></canvas>
-  <div class="ui">
-    <div class="heading">A LITTLE CHRISTMAS MAGIC<strong>MERRY CHRISTMAS</strong></div>
-    <div class="footer">
-      <button id="wishButton" type="button">✦ 许下心愿 ✦</button>
-      <p class="hint">轻轻拖动，旋转这棵星光圣诞树</p>
-    </div>
-    <div class="toast" id="toast">愿望已化作一颗星光 ✨</div>
-    <div class="signature">MADE OF A LITTLE MAGIC</div>
+<canvas id="scene" aria-label="星光粒子圣诞树"></canvas>
+<header class="hud">
+  <div class="kicker">A LITTLE CHRISTMAS MAGIC</div>
+  <h1>MERRY CHRISTMAS</h1>
+  <div class="countdown" id="countdown">正在计算圣诞倒计时…</div>
+  <div class="star-count" id="starCount">✦ 已收集 0 颗星光</div>
+</header>
+<div class="dock">
+  <div class="dock-row">
+    <button class="action primary" id="wishButton">✧ 许下心愿</button>
+    <button class="action" id="giftButton">🎁 打开礼物</button>
+    <button class="action" id="musicButton">♫ 铃声</button>
   </div>
+  <div class="dock-row">
+    <button class="action" id="meteorButton">☄ 流星雨</button>
+    <button class="action" id="settingsButton">✧ 场景设置</button>
+    <button class="action" id="snapshotButton">📸 留影</button>
+  </div>
+  <p class="hint">拖动旋转圣诞树 · 点击星光收集愿望</p>
+</div>
+<div class="signature">MADE WITH A LITTLE MAGIC · FOR SOMEONE SPECIAL</div>
+<div class="toast" id="toast">愿望已化作一颗星光 ✨</div>
 
-  <script>
-    (function () {
-      "use strict";
+<section class="overlay intro open" id="intro">
+  <div class="intro-card">
+    <div class="intro-star">✧</div>
+    <div class="intro-kicker">A LETTER FROM THE WINTER NIGHT</div>
+    <div class="intro-title">圣诞奇境</div>
+    <p class="intro-copy">雪花正在落下，星光正在闪烁。<br>这里藏着一份为你准备的小小惊喜。<br>准备好开启今晚的魔法了吗？</p>
+    <button class="primary" id="enterButton">开启圣诞奇境 ✦</button>
+  </div>
+</section>
 
-      const canvas = document.getElementById("scene");
-      const ctx = canvas.getContext("2d", { alpha: false });
-      const wishButton = document.getElementById("wishButton");
-      const toast = document.getElementById("toast");
+<section class="panel" id="settingsPanel" aria-hidden="true">
+  <div class="panel-head"><span>✧ 冬夜场景设置</span><button class="close" id="closeSettings">×</button></div>
+  <div class="label"><span>场景主题</span><span>选择冬日氛围</span></div>
+  <div class="theme-row">
+    <button class="theme-btn active" data-theme="aurora"><span class="dot" style="color:#55d9c4;background:linear-gradient(135deg,#42d5bd,#e7c477)"></span>极光蓝绿</button>
+    <button class="theme-btn" data-theme="rose"><span class="dot" style="color:#ed9bb5;background:linear-gradient(135deg,#ed9bb5,#e9c58a)"></span>玫瑰星河</button>
+    <button class="theme-btn" data-theme="violet"><span class="dot" style="color:#b7a6ff;background:linear-gradient(135deg,#9b8be9,#8ed9ed)"></span>梦幻紫境</button>
+  </div>
+  <div class="label"><span>飘雪密度</span><span id="snowValue">标准</span></div>
+  <input id="snowRange" type="range" min="0" max="2" step="1" value="1" aria-label="飘雪密度">
+  <div class="panel-grid">
+    <button class="panel-action" id="rotateToggle">⟳ 自动旋转：开启</button>
+    <button class="panel-action" id="fullscreenToggle">⛶ 全屏体验</button>
+    <button class="panel-action" id="shareToggle">↗ 分享网页</button>
+    <button class="panel-action" id="resetView">↺ 重置视角</button>
+  </div>
+</section>
 
-      const W = 700, H = 880, CX = 350, TOP = 154, TREE_H = 573, MAX_R = 267;
-      const TAU = Math.PI * 2;
-      const rand = (a, b) => a + Math.random() * (b - a);
-      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-      const smoothstep = (v) => v * v * (3 - 2 * v);
+<section class="overlay" id="giftModal" aria-hidden="true">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="giftHeading">
+    <button class="dialog-close" id="closeGift" aria-label="关闭">×</button>
+    <div class="dialog-kicker">A LITTLE PRESENT FOR YOU</div>
+    <h2 id="giftHeading">一份来自冬夜的礼物</h2>
+    <p class="dialog-sub" id="giftSub">轻轻打开礼物盒，看看星光为你藏下了什么。</p>
 
-      let dpr = 1, sx = 1, sy = 1;
-      let rotation = 0, dragging = false, lastX = 0;
-      let startTime = performance.now(), lastFrame = 0;
-      let wishParticles = [], wishPulse = 0, toastTimer = 0;
+    <div id="giftView">
+      <div class="gift-stage">
+        <div class="gift-box" id="giftBox"><div class="gift-lid"></div><div class="gift-bow"></div></div>
+        <button class="primary" id="unwrapButton">拆开这份礼物 ✨</button>
+      </div>
+      <div class="letter hidden" id="letter">
+        <div class="letter-to" id="letterTo">致：亲爱的朋友</div>
+        <div class="letter-message" id="letterMessage">愿你的冬天有温暖相伴，愿新的一年有星光引路。圣诞快乐！</div>
+        <div class="letter-from" id="letterFrom">—— 来自冬夜的祝福</div>
+      </div>
+      <div class="dialog-actions">
+        <button class="action" id="makeGiftButton">制作专属礼物</button>
+        <button class="action" id="copyPageButton">复制网页链接</button>
+      </div>
+    </div>
 
-      function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.round(window.innerWidth * dpr);
-        canvas.height = Math.round(window.innerHeight * dpr);
-        sx = window.innerWidth / W;
-        sy = window.innerHeight / H;
-        ctx.setTransform(dpr * sx, 0, 0, dpr * sy, 0, 0);
-      }
-      window.addEventListener("resize", resize, { passive: true });
-      resize();
+    <div id="composeView" class="hidden">
+      <label class="field-label" for="recipient">送给谁？</label>
+      <input class="field" id="recipient" maxlength="32" placeholder="例如：最好的朋友">
+      <label class="field-label" for="sender">你的署名</label>
+      <input class="field" id="sender" maxlength="32" placeholder="例如：婷羽">
+      <label class="field-label" for="greeting">写下专属祝福</label>
+      <textarea class="field" id="greeting" maxlength="260">愿你的冬天有温暖相伴，愿新的一年有星光引路。愿所有期待都如约而至，圣诞快乐！</textarea>
+      <div class="preview" id="cardPreview">愿你的冬天有温暖相伴，愿新的一年有星光引路。愿所有期待都如约而至，圣诞快乐！</div>
+      <div class="dialog-actions">
+        <button class="action" id="backToGift">返回礼物</button>
+        <button class="primary" id="generateLink">生成专属礼物链接</button>
+      </div>
+      <div class="share-url hidden" id="shareUrlBox"></div>
+      <div class="dialog-actions hidden" id="copyLinkRow">
+        <button class="action" id="copyGiftLink">复制专属链接</button>
+        <button class="action" id="previewGiftLink">预览礼物</button>
+      </div>
+    </div>
+  </div>
+</section>
 
-      function hex(r, g, b) {
-        return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
-      }
-      function blend(a, b, t) {
-        return [
-          a[0] * (1 - t) + b[0] * t,
-          a[1] * (1 - t) + b[1] * t,
-          a[2] * (1 - t) + b[2] * t
-        ];
-      }
-      function gaussian() {
-        let u = 0, v = 0;
-        while (u === 0) u = Math.random();
-        while (v === 0) v = Math.random();
-        return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
-      }
+<script>
+(function(){
+"use strict";
+const canvas=document.getElementById("scene"),ctx=canvas.getContext("2d",{alpha:false});
+const $=id=>document.getElementById(id);
+const TAU=Math.PI*2,W=700,H=880,CX=350,TOP=154,TREE_H=573,MAX_R=267;
+const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let dpr=1,sx=1,sy=1,rotation=0,dragging=false,lastX=0,downX=0,downY=0,autoRotate=true;
+let start=performance.now(),lastFrame=0,snowRatio=1,particles=[],meteors=[],toastTimer=0,starTotal=0;
+let audioContext=null,soundOn=false,personalGift=null,generatedGiftUrl="";
+function resize(){dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);sx=innerWidth/W;sy=innerHeight/H;ctx.setTransform(dpr*sx,0,0,dpr*sy,0,0)}
+window.addEventListener("resize",resize,{passive:true});resize();
+function gaussian(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)}
+function blend(a,b,t){return a.map((v,i)=>v*(1-t)+b[i]*t)}
+function rgb(a){return "rgb("+a.map(Math.round).join(",")+")"}
+const leaves=[];
+for(let i=0;i<5100;i++){
+ const u=Math.pow(Math.random(),.85),a=rand(0,TAU);
+ let r=MAX_R*Math.pow(u,.88)*Math.sqrt(Math.random());
+ r*=.95+.075*Math.sin(u*Math.PI*34+a*2.1);
+ const x=r*Math.cos(a)+gaussian()*3,z=r*Math.sin(a),y=TOP+TREE_H*u+z*.12+gaussian()*3.4;
+ const bright=rand(.55,1.2);let color=blend([8,74,83],[34,190,177],clamp(.23+clamp(bright)*.82,0,1));
+ if(Math.random()>.88)color=blend(color,[161,248,218],.58);
+ leaves.push({u,x,z,y,size:Math.random()<.6?1.1:Math.random()<.85?1.8:2.5,phase:rand(0,TAU),speed:rand(.5,2.1),color:rgb(color)});
+}
+const ornaments=[];
+for(let i=0;i<30;i++){const u=rand(.24,.93),r=MAX_R*Math.pow(u,.9)*rand(.18,.77),a=rand(0,TAU),palette=["#e14249","#f7b449","#d8f0ee"];ornaments.push({u,x:r*Math.cos(a),z:r*Math.sin(a),y:TOP+TREE_H*u+r*Math.sin(a)*.12,color:palette[Math.floor(Math.random()*palette.length)]})}
+const snow=Array.from({length:190},()=>({x:rand(0,W),y:rand(0,H),speed:rand(10,44),r:Math.random()<.76?1:2,alpha:rand(.4,1)}));
+const stars=Array.from({length:170},()=>({x:rand(0,W),y:rand(0,H),r:Math.random()<.7?1:2,alpha:rand(.15,.7)}));
+function project(x,z,y,a){const c=Math.cos(a),s=Math.sin(a),px=x*c+z*s,depth=-x*s+z*c;return{x:CX+px,y:y+depth*.12,depth}}
+function background(t,dt){
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#030814");g.addColorStop(.56,"#061523");g.addColorStop(1,"#081b28");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ const halo=ctx.createRadialGradient(CX,485,12,CX,485,365);halo.addColorStop(0,"rgba(9,92,91,.30)");halo.addColorStop(.52,"rgba(5,53,66,.18)");halo.addColorStop(1,"rgba(3,8,20,0)");ctx.fillStyle=halo;ctx.fillRect(0,170,W,650);
+ // Aurora curtains
+ ctx.save();ctx.globalCompositeOperation="screen";ctx.filter="blur(19px)";
+ for(let i=0;i<4;i++){
+  const y=100+i*33+Math.sin(t*.24+i)*18;
+  ctx.beginPath();ctx.moveTo(-40,y+25);
+  ctx.bezierCurveTo(145,y-90+Math.sin(t*.3+i)*22,260,y+95,390,y-4);
+  ctx.bezierCurveTo(505,y-75,595,y+70,745,y-25);
+  ctx.lineWidth=28+i*4;ctx.strokeStyle=["rgba(27,173,146,.10)","rgba(61,185,181,.09)","rgba(109,122,203,.07)","rgba(91,204,169,.06)"][i];ctx.stroke();
+ }
+ ctx.restore();ctx.filter="none";ctx.globalCompositeOperation="source-over";
+ const floor=ctx.createRadialGradient(CX,735,2,CX,735,270);floor.addColorStop(0,"rgba(26,142,119,.16)");floor.addColorStop(1,"rgba(3,8,20,0)");ctx.fillStyle=floor;ctx.fillRect(60,620,580,220);
+ for(const s of stars){ctx.globalAlpha=s.alpha*(.55+.45*Math.sin(t*.7+s.x*.2));ctx.fillStyle="#8eddd2";ctx.fillRect(s.x,s.y,s.r,s.r)}
+ ctx.globalAlpha=1;
+ for(let i=0;i<Math.floor(snow.length*snowRatio);i++){const f=snow[i],x=(f.x+Math.sin(t*.55+f.y*.05)*9+W)%W,y=(f.y+f.speed*t)%H;ctx.globalAlpha=f.alpha*.75;ctx.fillStyle="#c7eeed";ctx.beginPath();ctx.arc(x,y,f.r,0,TAU);ctx.fill()}
+ ctx.globalAlpha=1;
+}
+function ribbon(t,eased,angle,front){
+ for(let j=0;j<1450;j++){
+  const z=.025+.96*j/1449;if(z>eased||Math.sin(j*2.31+t*4.7)<=-.76)continue;
+  const a=TAU*5.4*z-1.5+.22*Math.sin(t*.32),r=MAX_R*Math.pow(z,.88)*1.02;
+  const p=project(r*Math.cos(a)+Math.sin(j*7.83)*3.6+Math.sin(j*2.4+t*2)*2.5,r*Math.sin(a),TOP+TREE_H*z+Math.cos(j*4.12)*2.1,angle);
+  if((p.depth>-3)!==front)continue;
+  const glow=.6+.4*Math.sin(t*2.8+j*.043),alpha=clamp((.48+glow*.48)*(front?1:.58),0,1),size=j%6===0?2.15:1.45;
+  if(j%12===0){ctx.globalAlpha=alpha*.22;ctx.fillStyle="#ffbd58";ctx.beginPath();ctx.arc(p.x,p.y,size*2.8,0,TAU);ctx.fill()}
+  ctx.globalAlpha=alpha;ctx.fillStyle=j%31===0?"#fff0bd":"#f5c36e";ctx.beginPath();ctx.arc(p.x,p.y,size,0,TAU);ctx.fill();
+ }
+ ctx.globalAlpha=1;
+}
+function drawLeaves(t,eased,angle){
+ for(let pass=0;pass<2;pass++)for(const l of leaves){if(l.u>eased)continue;const p=project(l.x+Math.sin(t*.8+l.phase+l.u*10)*1.7,l.z,l.y+Math.cos(t*.6+l.phase)*1.3,angle);if((p.depth>0?1:0)!==pass)continue;const tw=.62+.38*Math.sin(t*l.speed*2+l.phase),depth=.82+.22*(p.depth/MAX_R+1)/2;ctx.globalAlpha=clamp((.66+.34*tw)*(.76+.24*depth),0,1);ctx.fillStyle=l.color;const size=l.size*(.78+.22*tw)*depth;ctx.fillRect(p.x-size/2,p.y-size/2,size,size)}
+ ctx.globalAlpha=1;
+}
+function drawOrnaments(eased,angle,t){for(const o of ornaments){if(o.u>eased)continue;const p=project(o.x,o.z,o.y,angle);ctx.globalAlpha=.24;ctx.fillStyle=o.color;ctx.beginPath();ctx.arc(p.x,p.y,7+Math.sin(t*2+o.u*8),0,TAU);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle=o.color;ctx.beginPath();ctx.arc(p.x,p.y,o.color==="#d8f0ee"?2.5:3.5,0,TAU);ctx.fill();ctx.fillStyle="rgba(255,250,225,.9)";ctx.beginPath();ctx.arc(p.x-1.2,p.y-1.5,1.1,0,TAU);ctx.fill()}}
+function drawStar(t,eased){if(eased<.02)return;const pulse=.92+.08*Math.sin(t*4),glow=ctx.createRadialGradient(CX,TOP-12,1,CX,TOP-12,58*pulse);glow.addColorStop(0,"rgba(255,238,177,.5)");glow.addColorStop(.28,"rgba(255,206,112,.19)");glow.addColorStop(1,"rgba(255,190,90,0)");ctx.fillStyle=glow;ctx.fillRect(CX-65,TOP-80,130,130);ctx.fillStyle="#ffe08b";starShape(CX,TOP-12,22*pulse,9*pulse);ctx.fill();ctx.fillStyle="#fffbe0";starShape(CX,TOP-12,12*pulse,5*pulse);ctx.fill()}
+function starShape(x,y,r,inner){ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2===0?r:inner,px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath()}
+function ground(eased,t){if(eased<=.5)return;for(let j=0;j<55;j++){const x=130+j*8,y=TOP+TREE_H+Math.sin(j*1.33+t*.3)*3,c=Math.round(30*(eased-.5)*2*(1-Math.abs(x-CX)/360));ctx.globalAlpha=.7;ctx.fillStyle="rgb("+c+","+Math.max(1,Math.round(c*.67))+",4)";ctx.beginPath();ctx.arc(x,y,2,0,TAU);ctx.fill()}ctx.globalAlpha=1;if(eased>.94){ctx.textAlign="center";ctx.font="21px Georgia,serif";ctx.fillStyle="rgba(193,179,128,.92)";ctx.fillText("M E R R Y   C H R I S T M A S",CX,788);ctx.font="11px Georgia,serif";ctx.fillStyle="rgba(105,157,157,.8)";ctx.fillText("MAY YOUR WISHES FIND THEIR WAY",CX,830)}}
+function drawParticles(dt){for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy*=.985;p.life-=dt*p.decay;if(p.life<=0){particles.splice(i,1);continue}ctx.globalAlpha=Math.min(1,p.life);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size*(.6+p.life*.6),0,TAU);ctx.fill()}ctx.globalAlpha=1}
+function drawMeteors(dt){for(let i=meteors.length-1;i>=0;i--){const m=meteors[i];m.x+=m.vx*dt;m.y+=m.vy*dt;m.life-=dt;const grad=ctx.createLinearGradient(m.x,m.y,m.x-m.vx*.13,m.y-m.vy*.13);grad.addColorStop(0,"rgba(255,241,196,.95)");grad.addColorStop(1,"rgba(255,198,112,0)");ctx.globalAlpha=Math.max(0,m.life);ctx.strokeStyle=grad;ctx.lineWidth=m.width;ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(m.x-m.vx*.13,m.y-m.vy*.13);ctx.stroke();if(m.life<=0)meteors.splice(i,1)}ctx.globalAlpha=1}
+function render(now){const dt=lastFrame?Math.min((now-lastFrame)/1000,.05):.016;lastFrame=now;const t=(now-start)/1000,eased=clamp((t/3.4),0,1);const e=eased*eased*(3-2*eased);if(autoRotate&&!dragging)rotation+=dt*.12;const angle=rotation+Math.sin(t*.18)*.035;background(t,dt);ribbon(t,e,angle,false);drawLeaves(t,e,angle);ribbon(t,e,angle,true);drawOrnaments(e,angle,t);drawStar(t,e);ground(e,t);drawMeteors(dt);drawParticles(dt);requestAnimationFrame(render)}
+requestAnimationFrame(render);
 
-      const dark = [8, 74, 83], aqua = [34, 190, 177], ice = [161, 248, 218];
-      const leaves = [];
-      for (let i = 0; i < 5100; i++) {
-        const u = Math.pow(Math.random(), 0.85);
-        const angle = rand(0, TAU);
-        let radius = MAX_R * Math.pow(u, 0.88) * Math.sqrt(Math.random());
-        const band = Math.sin(u * Math.PI * 34 + angle * 2.1);
-        radius *= 0.95 + 0.075 * band;
-        const x = radius * Math.cos(angle) + gaussian() * 3;
-        const z = radius * Math.sin(angle);
-        const y = TOP + TREE_H * u + z * 0.12 + gaussian() * 3.4;
-        const size = Math.random() < 0.60 ? 1.1 : (Math.random() < 0.85 ? 1.8 : 2.5);
-        const bright = rand(0.55, 1.2);
-        const phase = rand(0, TAU);
-        const speed = rand(0.5, 2.1);
-        const colorMix = Math.random();
-        let color = blend(dark, aqua, clamp(0.23 + clamp(bright) * 0.82, 0, 1));
-        if (colorMix > 0.88) color = blend(color, ice, 0.58);
-        leaves.push({ u, x, z, y, size, bright, phase, speed, color: hex(color[0], color[1], color[2]) });
-      }
+function burst(x,y,count,colors){for(let i=0;i<count;i++){const a=rand(0,TAU),speed=rand(35,220);particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:rand(.7,1.45),decay:rand(.65,1.05),size:rand(1.2,3.2),color:colors[Math.floor(Math.random()*colors.length)]})}}
+function toast(message){$("toast").textContent=message;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2500)}
+function chime(){if(!soundOn||!audioContext)return;const notes=[659.25,783.99,987.77,783.99,880,987.77,1174.66],when=audioContext.currentTime+.025;notes.forEach((f,i)=>{const osc=audioContext.createOscillator(),gain=audioContext.createGain(),at=when+i*.105;osc.type="sine";osc.frequency.setValueAtTime(f,at);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.055,at+.018);gain.gain.exponentialRampToValueAtTime(.0001,at+.42);osc.connect(gain);gain.connect(audioContext.destination);osc.start(at);osc.stop(at+.44)})}
+async function toggleSound(){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor){toast("当前浏览器暂不支持音效");return}if(!audioContext)audioContext=new AudioCtor();if(audioContext.state==="suspended")await audioContext.resume();soundOn=!soundOn;$("musicButton").textContent=soundOn?"♫ 铃声已开":"♫ 铃声";if(soundOn){chime();toast("冬夜铃声已开启 ♫")}else toast("铃声音效已关闭")}
+function updateCountdown(){const now=new Date();let x=new Date(now.getFullYear(),11,25);if(now>x)x=new Date(now.getFullYear()+1,11,25);const ms=x-now,d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);$("countdown").textContent="距离圣诞节还有 "+d+" 天 "+h+" 小时 "+m+" 分"}
+updateCountdown();setInterval(updateCountdown,60000);
 
-      for (let k = 0; k < 170; k++) {
-        const u = rand(0.08, 0.98);
-        const angle = rand(0, TAU);
-        const length = MAX_R * Math.pow(u, 0.9);
-        for (let j = 0; j < 10; j++) {
-          const rr = length * rand(0.66, 1.07);
-          const a = angle + gaussian() * 0.042;
-          const x = rr * Math.cos(a);
-          const z = rr * Math.sin(a);
-          const y = TOP + TREE_H * u + z * 0.12 + gaussian() * 4.2;
-          const color = Math.random() > 0.5 ? "rgb(48,190,174)" : "rgb(91,218,192)";
-          leaves.push({ u, x, z, y, size: Math.random() < 0.7 ? 1.2 : 1.8, bright: rand(0.6, 1.2), phase: rand(0, TAU), speed: rand(0.5, 2.1), color });
-        }
-      }
+canvas.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX;downX=e.clientX;downY=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener("pointermove",e=>{if(!dragging)return;rotation+=(e.clientX-lastX)*.008;lastX=e.clientX});
+function stopDrag(e){if(e&&e.type==="pointerup"&&Math.hypot(e.clientX-downX,e.clientY-downY)<7){const r=canvas.getBoundingClientRect();burst((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H,20,["#d7fff0","#ffe5a0","#a8e9df"]);starTotal++;$("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光";}dragging=false}
+canvas.addEventListener("pointerup",stopDrag);canvas.addEventListener("pointercancel",()=>{dragging=false});canvas.addEventListener("lostpointercapture",()=>{dragging=false});
 
-      const ornaments = [];
-      for (let i = 0; i < 28; i++) {
-        const u = rand(0.24, 0.93);
-        const rr = MAX_R * Math.pow(u, 0.9) * rand(0.18, 0.77);
-        const a = rand(0, TAU);
-        const palette = ["#e14249", "#f7b449", "#d8f0ee"];
-        ornaments.push({ u, x: rr * Math.cos(a), z: rr * Math.sin(a), y: TOP + TREE_H * u + rr * Math.sin(a) * 0.12, color: palette[Math.floor(Math.random() * palette.length)] });
-      }
+$("enterButton").addEventListener("click",()=>{$("intro").classList.remove("open");burst(CX,TOP,65,["#ffe5a0","#a9f6df","#fff4d4"]);if(personalGift)setTimeout(openGift,1050)});
+$("wishButton").addEventListener("click",()=>{burst(CX,TOP-12,95,["#ffe5a0","#a9f6df","#fff4d0"]);starTotal++;$("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光";chime();toast("愿望已化作一颗星光，飞向冬夜 ✨")});
+$("musicButton").addEventListener("click",toggleSound);
+$("meteorButton").addEventListener("click",()=>{for(let i=0;i<38;i++)meteors.push({x:rand(20,W-20),y:rand(-130,H*.55),vx:rand(75,145),vy:rand(180,320),life:rand(.65,1.25),width:rand(1,2.4)});toast("抬头看看，流星雨来啦 ☄")});
 
-      const snow = Array.from({ length: 130 }, () => ({
-        x: rand(0, W), y: rand(0, H), speed: rand(10, 44),
-        r: Math.random() < 0.76 ? 1 : 2, alpha: rand(0.4, 1)
-      }));
-      const skyStars = Array.from({ length: 155 }, () => ({
-        x: rand(0, W), y: rand(0, H), r: Math.random() < 0.7 ? 1 : 2, alpha: rand(0.15, 0.7)
-      }));
+function openPanel(open){$("settingsPanel").classList.toggle("open",open);$("settingsPanel").setAttribute("aria-hidden",open?"false":"true")}
+$("settingsButton").addEventListener("click",()=>openPanel(!$("settingsPanel").classList.contains("open")));
+$("closeSettings").addEventListener("click",()=>openPanel(false));
+$("snowRange").addEventListener("input",e=>{snowRatio=[.35,1,1.8][Number(e.target.value)];$("snowValue").textContent=["轻柔","标准","暴雪"][Number(e.target.value)]});
+$("rotateToggle").addEventListener("click",()=>{autoRotate=!autoRotate;$("rotateToggle").textContent=autoRotate?"⟳ 自动旋转：开启":"⟳ 自动旋转：关闭"});
+$("resetView").addEventListener("click",()=>{rotation=0;autoRotate=true;$("rotateToggle").textContent="⟳ 自动旋转：开启";toast("视角已恢复")});
+const filters={aurora:"none",rose:"hue-rotate(285deg) saturate(1.18) brightness(1.04)",violet:"hue-rotate(205deg) saturate(1.22) brightness(1.06)"};
+document.querySelectorAll("[data-theme]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-theme]").forEach(x=>x.classList.remove("active"));b.classList.add("active");canvas.style.filter=filters[b.dataset.theme]}));
+$("fullscreenToggle").addEventListener("click",async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){toast("当前浏览器不支持全屏")}});
 
-      function project(x, z, y, angle) {
-        const c = Math.cos(angle), s = Math.sin(angle);
-        const px = x * c + z * s;
-        const depth = -x * s + z * c;
-        return { x: CX + px, y: y + depth * 0.12, depth };
-      }
+function giftText(){return{to:$("recipient").value.trim(),from:$("sender").value.trim(),message:$("greeting").value.trim()}}
+function displayLetter(data){$("letterTo").textContent=data.to?"致："+data.to:"致：亲爱的朋友";$("letterMessage").textContent=data.message||"愿你的冬天有温暖相伴，愿新的一年有星光引路。圣诞快乐！";$("letterFrom").textContent="—— "+(data.from||"来自冬夜的祝福");$("giftHeading").textContent=data.to?"给 "+data.to+" 的圣诞惊喜":"一份来自冬夜的礼物";$("giftSub").textContent=data.from?(data.from+" 为你准备了一份小小的冬日惊喜。"):"轻轻打开礼物盒，看看星光为你藏下了什么。"}
+function showCompose(show){$("giftView").classList.toggle("hidden",show);$("composeView").classList.toggle("hidden",!show);$("shareUrlBox").classList.add("hidden");$("copyLinkRow").classList.add("hidden")}
+function openGift(){openPanel(false);$("giftModal").classList.add("open");$("giftModal").setAttribute("aria-hidden","false");$("giftBox").classList.remove("opened");$("letter").classList.add("hidden");showCompose(false);displayLetter(personalGift||{message:"愿你的冬天有温暖相伴，愿新的一年有星光引路。愿所有期待都如约而至，圣诞快乐！",from:"来自冬夜的祝福"})}
+function closeGift(){$("giftModal").classList.remove("open");$("giftModal").setAttribute("aria-hidden","true")}
+$("giftButton").addEventListener("click",openGift);$("closeGift").addEventListener("click",closeGift);$("giftModal").addEventListener("click",e=>{if(e.target===$("giftModal"))closeGift()});
+$("unwrapButton").addEventListener("click",()=>{if($("giftBox").classList.contains("opened"))return;$("giftBox").classList.add("opened");setTimeout(()=>$("letter").classList.remove("hidden"),360);burst(CX,TOP+190,75,["#ffe5a0","#a9f6df","#fff4d4"]);chime();toast("礼物打开啦，愿这份祝福陪伴你 ✨")});
+$("makeGiftButton").addEventListener("click",()=>showCompose(true));$("backToGift").addEventListener("click",()=>showCompose(false));
+function updatePreview(){const d=giftText();$("cardPreview").textContent=(d.to?"致 "+d.to+"：\n":"")+d.message+(d.from?"\n\n—— "+d.from:"")}
+["recipient","sender","greeting"].forEach(id=>$(id).addEventListener("input",updatePreview));
+async function copyText(text){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return true}const el=document.createElement("textarea");el.value=text;el.style.position="fixed";el.style.opacity="0";document.body.appendChild(el);el.select();const ok=document.execCommand("copy");el.remove();return ok}
+$("generateLink").addEventListener("click",()=>{const d=giftText();if(!d.message){toast("先写下一句祝福吧");return}const u=new URL(window.location.href);u.searchParams.set("gift","1");if(d.to)u.searchParams.set("to",d.to);else u.searchParams.delete("to");if(d.from)u.searchParams.set("from",d.from);else u.searchParams.delete("from");u.searchParams.set("msg",d.message);generatedGiftUrl=u.toString();$("shareUrlBox").textContent=generatedGiftUrl;$("shareUrlBox").classList.remove("hidden");$("copyLinkRow").classList.remove("hidden");toast("专属礼物链接已生成，可以分享给好友啦")});
+$("copyGiftLink").addEventListener("click",async()=>{try{await copyText(generatedGiftUrl);toast("专属礼物链接已复制，去微信发送吧")}catch(e){toast("复制失败，请长按链接手动复制")}});
+$("previewGiftLink").addEventListener("click",()=>{const d=giftText();personalGift=d;displayLetter(d);showCompose(false);$("giftBox").classList.remove("opened");$("letter").classList.add("hidden")});
+async function sharePage(){const data={title:"星愿圣诞礼物屋",text:"送你一份来自冬夜的圣诞惊喜 🎄",url:window.location.href};try{if(navigator.share)await navigator.share(data);else{await copyText(window.location.href);toast("网页链接已复制，去微信分享吧")}}catch(e){if(e.name!=="AbortError")toast("请复制浏览器地址栏中的网页链接")}}
+$("shareToggle").addEventListener("click",sharePage);$("copyPageButton").addEventListener("click",async()=>{try{await copyText(window.location.origin+window.location.pathname);toast("网页链接已复制")}catch(e){toast("复制失败，请复制地址栏链接")}});
 
-      function drawBackground(t) {
-        const gradient = ctx.createLinearGradient(0, 0, 0, H);
-        gradient.addColorStop(0, "#030814");
-        gradient.addColorStop(0.56, "#061523");
-        gradient.addColorStop(1, "#081b28");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, W, H);
+$("snapshotButton").addEventListener("click",()=>{try{const out=document.createElement("canvas");out.width=canvas.width;out.height=canvas.height;const c=out.getContext("2d");c.drawImage(canvas,0,0);c.fillStyle="rgba(255,239,202,.94)";c.textAlign="center";c.font="30px Georgia,serif";c.fillText("MERRY CHRISTMAS",out.width/2,out.height*.11);c.fillStyle="rgba(196,224,215,.82)";c.font="14px sans-serif";c.fillText("A LITTLE CHRISTMAS MAGIC",out.width/2,out.height*.135);const a=document.createElement("a");a.download="星愿圣诞树.png";a.href=out.toDataURL("image/png");a.click();toast("圣诞树纪念图已保存 📸")}catch(e){toast("保存失败，请尝试浏览器截图")}});
 
-        const halo = ctx.createRadialGradient(CX, 485, 12, CX, 485, 365);
-        halo.addColorStop(0, "rgba(9,92,91,0.30)");
-        halo.addColorStop(0.52, "rgba(5,53,66,0.18)");
-        halo.addColorStop(1, "rgba(3,8,20,0)");
-        ctx.fillStyle = halo;
-        ctx.fillRect(0, 170, W, 650);
-
-        const floor = ctx.createRadialGradient(CX, 735, 2, CX, 735, 270);
-        floor.addColorStop(0, "rgba(26,142,119,0.16)");
-        floor.addColorStop(1, "rgba(3,8,20,0)");
-        ctx.fillStyle = floor;
-        ctx.fillRect(60, 620, 580, 220);
-
-        for (const star of skyStars) {
-          const twinkle = 0.55 + 0.45 * Math.sin(t * 0.7 + star.x * 0.2);
-          ctx.globalAlpha = star.alpha * twinkle;
-          ctx.fillStyle = "#8eddd2";
-          ctx.fillRect(star.x, star.y, star.r, star.r);
-        }
-        ctx.globalAlpha = 1;
-
-        for (const flake of snow) {
-          const x = (flake.x + Math.sin(t * 0.55 + flake.y * 0.05) * 9) % W;
-          const y = (flake.y + flake.speed * t) % H;
-          ctx.globalAlpha = flake.alpha * 0.75;
-          ctx.fillStyle = "#b9e7e9";
-          ctx.beginPath();
-          ctx.arc(x, y, flake.r, 0, TAU);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      function drawRibbon(t, eased, angle, front) {
-        const count = 1450;
-        for (let j = 0; j < count; j++) {
-          const z = 0.025 + 0.96 * j / (count - 1);
-          if (z > eased) continue;
-          if (Math.sin(j * 2.31 + t * 4.7) <= -0.76) continue;
-          const a = TAU * 5.4 * z - 1.5 + 0.22 * Math.sin(t * 0.32);
-          const radius = MAX_R * Math.pow(z, 0.88) * 1.02;
-          let x = radius * Math.cos(a) + Math.sin(j * 7.83) * 3.6 + Math.sin(j * 2.4 + t * 2) * 2.5;
-          let zz = radius * Math.sin(a);
-          const p = project(x, zz, TOP + TREE_H * z + Math.cos(j * 4.12) * 2.1, angle);
-          const isFront = p.depth > -3;
-          if (isFront !== front) continue;
-          const glow = 0.6 + 0.4 * Math.sin(t * 2.8 + j * 0.043);
-          const alpha = clamp((0.48 + glow * 0.48) * (front ? 1 : 0.58), 0, 1);
-          const r = j % 6 === 0 ? 2.15 : 1.45;
-          if (j % 12 === 0) {
-            ctx.globalAlpha = alpha * 0.22;
-            ctx.fillStyle = "#ffbd58";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, r * 2.8, 0, TAU);
-            ctx.fill();
-          }
-          ctx.globalAlpha = alpha;
-          ctx.fillStyle = j % 31 === 0 ? "#fff0bd" : "#f5c36e";
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r, 0, TAU);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      function drawLeaves(t, eased, angle) {
-        for (let pass = 0; pass < 2; pass++) {
-          for (const leaf of leaves) {
-            if (leaf.u > eased) continue;
-            const p = project(
-              leaf.x + Math.sin(t * 0.8 + leaf.phase + leaf.u * 10) * 1.7,
-              leaf.z,
-              leaf.y + Math.cos(t * 0.6 + leaf.phase) * 1.3,
-              angle
-            );
-            if ((p.depth > 0 ? 1 : 0) !== pass) continue;
-            const twinkle = 0.62 + 0.38 * Math.sin(t * leaf.speed * 2 + leaf.phase);
-            const depthScale = 0.82 + 0.22 * (p.depth / MAX_R + 1) / 2;
-            ctx.globalAlpha = clamp((0.66 + 0.34 * twinkle) * (0.76 + 0.24 * depthScale), 0, 1);
-            ctx.fillStyle = leaf.color;
-            const size = leaf.size * (0.78 + 0.22 * twinkle) * depthScale;
-            ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      function drawOrnaments(eased, angle) {
-        for (const item of ornaments) {
-          if (item.u > eased) continue;
-          const p = project(item.x, item.z, item.y, angle);
-          ctx.globalAlpha = 0.26;
-          ctx.fillStyle = item.color;
-          ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, TAU); ctx.fill();
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = item.color;
-          ctx.beginPath(); ctx.arc(p.x, p.y, item.color === "#d8f0ee" ? 2.5 : 3.5, 0, TAU); ctx.fill();
-          ctx.fillStyle = "rgba(255,250,225,0.9)";
-          ctx.beginPath(); ctx.arc(p.x - 1.2, p.y - 1.5, 1.1, 0, TAU); ctx.fill();
-        }
-      }
-
-      function starPath(x, y, outer, inner) {
-        ctx.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = -Math.PI / 2 + i * Math.PI / 5;
-          const r = i % 2 === 0 ? outer : inner;
-          const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-      }
-
-      function drawTopStar(t, eased) {
-        if (eased <= 0.02) return;
-        const pulse = 0.92 + 0.08 * Math.sin(t * 4);
-        const glow = ctx.createRadialGradient(CX, TOP - 12, 1, CX, TOP - 12, 58 * pulse);
-        glow.addColorStop(0, "rgba(255,238,177,0.50)");
-        glow.addColorStop(0.28, "rgba(255,206,112,0.19)");
-        glow.addColorStop(1, "rgba(255,190,90,0)");
-        ctx.fillStyle = glow;
-        ctx.fillRect(CX - 65, TOP - 80, 130, 130);
-        ctx.fillStyle = "#ffe08b";
-        starPath(CX, TOP - 12, 22 * pulse, 9 * pulse);
-        ctx.fill();
-        ctx.fillStyle = "#fffbe0";
-        starPath(CX, TOP - 12, 12 * pulse, 5 * pulse);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,211,123,0.75)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(CX - 32, TOP - 12); ctx.lineTo(CX + 32, TOP - 12);
-        ctx.moveTo(CX, TOP - 46); ctx.lineTo(CX, TOP + 23);
-        ctx.stroke();
-      }
-
-      function drawGround(eased, t) {
-        if (eased <= 0.5) return;
-        const a = (eased - 0.5) * 2;
-        for (let j = 0; j < 55; j++) {
-          const x = 130 + j * 8;
-          const y = TOP + TREE_H + Math.sin(j * 1.33 + t * 0.3) * 3;
-          const c = Math.round(30 * a * (1 - Math.abs(x - CX) / 360));
-          ctx.globalAlpha = 0.7;
-          ctx.fillStyle = "rgb(" + c + "," + Math.max(1, Math.round(c * 0.67)) + ",4)";
-          ctx.beginPath(); ctx.arc(x, y, 2, 0, TAU); ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-        if (eased > 0.94) {
-          ctx.textAlign = "center";
-          ctx.font = "21px Georgia, serif";
-          ctx.fillStyle = "rgba(193,179,128,0.92)";
-          ctx.fillText("M E R R Y   C H R I S T M A S", CX, 788);
-          ctx.font = "11px Georgia, serif";
-          ctx.fillStyle = "rgba(105,157,157,0.8)";
-          ctx.fillText("MAY YOUR WISHES FIND THEIR WAY", CX, 830);
-        }
-      }
-
-      function drawWishParticles(dt) {
-        for (let i = wishParticles.length - 1; i >= 0; i--) {
-          const p = wishParticles[i];
-          p.x += p.vx * dt;
-          p.y += p.vy * dt;
-          p.vx *= 0.985; p.vy *= 0.985;
-          p.life -= dt * 0.72;
-          if (p.life <= 0) { wishParticles.splice(i, 1); continue; }
-          ctx.globalAlpha = p.life;
-          ctx.fillStyle = p.color;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * (0.6 + p.life * 0.6), 0, TAU);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      function render(now) {
-        const dt = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0.016;
-        lastFrame = now;
-        const t = (now - startTime) / 1000;
-        const eased = smoothstep(clamp(t / 3.4, 0, 1));
-        const angle = rotation + Math.sin(t * 0.18) * 0.035;
-
-        drawBackground(t);
-        drawRibbon(t, eased, angle, false);
-        drawLeaves(t, eased, angle);
-        drawRibbon(t, eased, angle, true);
-        drawOrnaments(eased, angle);
-        drawTopStar(t, eased);
-        drawGround(eased, t);
-        drawWishParticles(dt);
-
-        requestAnimationFrame(render);
-      }
-      requestAnimationFrame(render);
-
-      canvas.addEventListener("pointerdown", function (event) {
-        dragging = true;
-        lastX = event.clientX;
-        canvas.setPointerCapture(event.pointerId);
-      });
-      canvas.addEventListener("pointermove", function (event) {
-        if (!dragging) return;
-        const dx = event.clientX - lastX;
-        rotation += dx * 0.008;
-        lastX = event.clientX;
-      });
-      function stopDragging() { dragging = false; }
-      canvas.addEventListener("pointerup", stopDragging);
-      canvas.addEventListener("pointercancel", stopDragging);
-      canvas.addEventListener("lostpointercapture", stopDragging);
-
-      wishButton.addEventListener("click", function () {
-        const now = performance.now();
-        wishPulse = now;
-        for (let i = 0; i < 72; i++) {
-          const a = rand(0, TAU), speed = rand(45, 210);
-          wishParticles.push({
-            x: CX, y: TOP - 12, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-            life: rand(0.75, 1.35), size: rand(1.2, 3.1),
-            color: Math.random() > 0.22 ? "#ffe5a0" : "#a9f6df"
-          });
-        }
-        toast.classList.add("show");
-        window.clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 2300);
-      });
-    })();
-  </script>
+const params=new URLSearchParams(window.location.search);
+if(params.has("gift")||params.has("msg")||params.has("to")){
+ personalGift={to:params.get("to")||"",from:params.get("from")||"",message:params.get("msg")||"愿你的冬天有温暖相伴，愿新的一年有星光引路。圣诞快乐！"};
+ displayLetter(personalGift);
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeGift();openPanel(false)}});
+})();
+</script>
 </body>
 </html>
