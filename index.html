@@ -79,6 +79,19 @@ textarea.field{min-height:88px;resize:vertical;line-height:1.65}
 .hidden{display:none!important}
 @media(max-width:420px){.action{padding:9px 10px;font-size:11px}.dock{gap:7px}.panel{bottom:max(126px,calc(env(safe-area-inset-bottom) + 120px))}.dialog{padding:22px 16px 17px}}
 @media(max-height:690px){.hud{top:max(10px,env(safe-area-inset-top))}.countdown{margin-top:5px}.dock{bottom:max(8px,env(safe-area-inset-bottom));gap:5px}.action{padding:8px 10px}.hint{font-size:9px}.panel{bottom:max(105px,calc(env(safe-area-inset-bottom) + 100px))}}
+
+.wish-dialog{position:relative;width:min(100%,410px);max-height:min(86vh,740px);overflow:auto;padding:24px 20px 20px;border:1px solid rgba(238,204,132,.4);border-radius:23px;background:radial-gradient(circle at 50% 0%,rgba(51,112,104,.42),transparent 48%),linear-gradient(150deg,#102c36,#071522 72%);box-shadow:0 20px 70px rgba(0,0,0,.5),0 0 34px rgba(237,190,109,.1)}
+.jar-illustration{position:relative;width:112px;height:125px;margin:12px auto 17px;border:3px solid rgba(174,222,214,.72);border-top:0;border-radius:12px 12px 27px 27px;background:linear-gradient(135deg,rgba(177,235,223,.13),rgba(77,154,153,.04));box-shadow:inset 0 0 22px rgba(174,238,222,.1),0 0 24px rgba(83,208,183,.1)}
+.jar-illustration:before{content:"";position:absolute;left:-5px;right:-5px;top:-9px;height:14px;border:2px solid #d5b876;border-radius:6px;background:linear-gradient(180deg,#f2d99c,#9d7741)}
+.jar-illustration:after{content:"✦  ✧  ✦";position:absolute;left:0;right:0;top:43px;text-align:center;color:#f4d28c;font-size:22px;text-shadow:0 0 13px #f4d28c;animation:jarGlow 2s ease-in-out infinite}
+.jar-note{position:absolute;left:17px;right:17px;bottom:14px;height:30px;border-radius:5px;background:rgba(243,218,160,.16);transform:rotate(-5deg);border:1px dashed rgba(243,218,160,.55)}
+@keyframes jarGlow{50%{opacity:.48;transform:scale(1.08)}}
+.wish-list{display:flex;flex-direction:column;gap:8px;max-height:185px;overflow:auto;margin-top:12px}
+.wish-entry{padding:10px 12px;border:1px solid rgba(188,220,207,.16);border-radius:11px;background:rgba(255,255,255,.045);color:#e9e5d4;font-size:12px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.wish-entry small{display:block;margin-top:4px;color:rgba(174,211,201,.55);font-size:10px}
+.wish-empty{padding:12px;text-align:center;color:rgba(205,224,215,.52);font-size:12px}
+.wish-note{margin:10px 0 0;color:rgba(185,211,201,.48);font-size:10px;line-height:1.6;text-align:center}
+
 </style>
 </head>
 <body>
@@ -93,7 +106,7 @@ textarea.field{min-height:88px;resize:vertical;line-height:1.65}
   <div class="dock-row">
     <button class="action primary" id="wishButton">✧ 许下心愿</button>
     <button class="action" id="giftButton">🎁 打开礼物</button>
-    <button class="action" id="musicButton">♫ 铃声</button>
+    <button class="action" id="wishJarButton">🫙 心愿瓶</button>
   </div>
   <div class="dock-row">
     <button class="action" id="meteorButton">☄ 流星雨</button>
@@ -177,6 +190,26 @@ textarea.field{min-height:88px;resize:vertical;line-height:1.65}
   </div>
 </section>
 
+
+<section class="overlay" id="wishJarModal" aria-hidden="true">
+  <div class="wish-dialog" role="dialog" aria-modal="true" aria-labelledby="wishJarTitle">
+    <button class="dialog-close" id="closeWishJar" aria-label="关闭">×</button>
+    <div class="dialog-kicker">A LITTLE WISH, KEPT SAFE</div>
+    <h2 id="wishJarTitle">冬日心愿瓶</h2>
+    <p class="dialog-sub">把一个小小的愿望写下来，放进冬夜的星光里。</p>
+    <div class="jar-illustration"><div class="jar-note"></div></div>
+    <label class="field-label" for="wishInput">写下此刻的心愿</label>
+    <textarea class="field" id="wishInput" maxlength="160" placeholder="例如：希望新的一年，平安顺遂，所愿皆所得……"></textarea>
+    <div class="dialog-actions">
+      <button class="action" id="randomWishButton">✧ 抽一条冬日祝福</button>
+      <button class="primary" id="saveWishButton">把心愿放进去</button>
+    </div>
+    <div class="label"><span>我的心愿收藏</span><span id="wishSavedCount">0 / 12</span></div>
+    <div class="wish-list" id="wishList"><div class="wish-empty">还没有保存心愿，写下第一条吧 ✨</div></div>
+    <p class="wish-note">心愿只保存在当前设备的浏览器中，不会上传到网站。</p>
+  </div>
+</section>
+
 <script>
 (function(){
 "use strict";
@@ -186,7 +219,9 @@ const TAU=Math.PI*2,W=700,H=880,CX=350,TOP=154,TREE_H=573,MAX_R=267;
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 let dpr=1,sx=1,sy=1,rotation=0,dragging=false,lastX=0,downX=0,downY=0,autoRotate=true;
 let start=performance.now(),lastFrame=0,snowRatio=1,particles=[],meteors=[],toastTimer=0,starTotal=0;
-let audioContext=null,soundOn=false,personalGift=null,generatedGiftUrl="";
+let personalGift=null,generatedGiftUrl="";
+try{starTotal=Number(localStorage.getItem("christmas-star-count")||0)||0}catch(e){starTotal=0}
+$("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光 · 每5颗解锁祝福";
 function resize(){dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);sx=innerWidth/W;sy=innerHeight/H;ctx.setTransform(dpr*sx,0,0,dpr*sy,0,0)}
 window.addEventListener("resize",resize,{passive:true});resize();
 function gaussian(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)}
@@ -253,19 +288,59 @@ requestAnimationFrame(render);
 
 function burst(x,y,count,colors){for(let i=0;i<count;i++){const a=rand(0,TAU),speed=rand(35,220);particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:rand(.7,1.45),decay:rand(.65,1.05),size:rand(1.2,3.2),color:colors[Math.floor(Math.random()*colors.length)]})}}
 function toast(message){$("toast").textContent=message;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),2500)}
-function chime(){if(!soundOn||!audioContext)return;const notes=[659.25,783.99,987.77,783.99,880,987.77,1174.66],when=audioContext.currentTime+.025;notes.forEach((f,i)=>{const osc=audioContext.createOscillator(),gain=audioContext.createGain(),at=when+i*.105;osc.type="sine";osc.frequency.setValueAtTime(f,at);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.055,at+.018);gain.gain.exponentialRampToValueAtTime(.0001,at+.42);osc.connect(gain);gain.connect(audioContext.destination);osc.start(at);osc.stop(at+.44)})}
-async function toggleSound(){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor){toast("当前浏览器暂不支持音效");return}if(!audioContext)audioContext=new AudioCtor();if(audioContext.state==="suspended")await audioContext.resume();soundOn=!soundOn;$("musicButton").textContent=soundOn?"♫ 铃声已开":"♫ 铃声";if(soundOn){chime();toast("冬夜铃声已开启 ♫")}else toast("铃声音效已关闭")}
+
+function collectStar(){
+ starTotal++;
+ try{localStorage.setItem("christmas-star-count",String(starTotal))}catch(e){}
+ $("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光 · 每5颗解锁祝福";
+ if(starTotal%5===0){
+  const bonus=["愿你所遇皆温柔，所行皆坦途。","愿每一个认真生活的日子，都闪闪发光。","愿新的一年，有期待、有惊喜，也有爱。","愿冬日有暖阳，前路有星光。","愿所有美好，都在不经意间如约而至。"];
+  burst(CX,TOP,72,["#ffe5a0","#a9f6df","#fff4d4"]);
+  toast("集齐 "+starTotal+" 颗星光！"+bonus[Math.floor(Math.random()*bonus.length)]);
+ }
+}
+
+const wishKey="christmas-wish-jar-v1";
+const wishQuotes=[
+ "愿你所遇皆温柔，所行皆坦途。",
+ "愿每一个认真生活的日子，都闪闪发光。",
+ "愿新的一年，有期待、有惊喜，也有爱。",
+ "愿冬日有暖阳，前路有星光。",
+ "愿所有美好，都在不经意间如约而至。",
+ "愿你永远有勇气奔赴热爱，也有底气拥抱平凡。",
+ "愿烦恼随雪花融化，快乐像星光一样常在。",
+ "愿你被世界温柔以待，也一直保有热爱。",
+ "愿平安喜乐，万事胜意，岁岁常欢愉。",
+ "愿心中有梦，眼里有光，脚下有路。"
+];
+function readWishes(){try{const data=JSON.parse(localStorage.getItem(wishKey)||"[]");return Array.isArray(data)?data.slice(0,12):[]}catch(e){return[]}}
+function renderWishes(){
+ const list=$("wishList"),items=readWishes();list.textContent="";$("wishSavedCount").textContent=items.length+" / 12";
+ if(!items.length){const empty=document.createElement("div");empty.className="wish-empty";empty.textContent="还没有保存心愿，写下第一条吧 ✨";list.appendChild(empty);return}
+ items.forEach(item=>{const card=document.createElement("div");card.className="wish-entry";const body=document.createElement("span");body.textContent=item.text||"";const date=document.createElement("small");date.textContent=item.date||"珍藏的一天";card.append(body,date);list.appendChild(card)});
+}
+function openWishJar(){$("wishJarModal").classList.add("open");$("wishJarModal").setAttribute("aria-hidden","false");renderWishes()}
+function closeWishJar(){$("wishJarModal").classList.remove("open");$("wishJarModal").setAttribute("aria-hidden","true")}
+$("wishJarButton").addEventListener("click",openWishJar);
+$("closeWishJar").addEventListener("click",closeWishJar);
+$("wishJarModal").addEventListener("click",e=>{if(e.target===$("wishJarModal"))closeWishJar()});
+$("saveWishButton").addEventListener("click",()=>{
+ const text=$("wishInput").value.trim();if(!text){toast("先写下一句心愿吧 ✨");$("wishInput").focus();return}
+ const items=readWishes();items.unshift({text,date:new Date().toLocaleDateString()});
+ try{localStorage.setItem(wishKey,JSON.stringify(items.slice(0,12)));$("wishInput").value="";renderWishes();burst(CX,TOP+240,35,["#ffe5a0","#a9f6df","#fff4d4"]);toast("心愿已经放进瓶子里啦 ✨")}
+ catch(e){toast("当前浏览器无法保存，请检查存储空间")}
+});
+$("randomWishButton").addEventListener("click",()=>{$("wishInput").value=wishQuotes[Math.floor(Math.random()*wishQuotes.length)];$("wishInput").focus();toast("抽到一条冬日祝福，愿它陪伴你")});
 function updateCountdown(){const now=new Date();let x=new Date(now.getFullYear(),11,25);if(now>x)x=new Date(now.getFullYear()+1,11,25);const ms=x-now,d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);$("countdown").textContent="距离圣诞节还有 "+d+" 天 "+h+" 小时 "+m+" 分"}
 updateCountdown();setInterval(updateCountdown,60000);
 
 canvas.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX;downX=e.clientX;downY=e.clientY;canvas.setPointerCapture(e.pointerId)});
 canvas.addEventListener("pointermove",e=>{if(!dragging)return;rotation+=(e.clientX-lastX)*.008;lastX=e.clientX});
-function stopDrag(e){if(e&&e.type==="pointerup"&&Math.hypot(e.clientX-downX,e.clientY-downY)<7){const r=canvas.getBoundingClientRect();burst((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H,20,["#d7fff0","#ffe5a0","#a8e9df"]);starTotal++;$("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光";}dragging=false}
+function stopDrag(e){if(e&&e.type==="pointerup"&&Math.hypot(e.clientX-downX,e.clientY-downY)<7){const r=canvas.getBoundingClientRect();burst((e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H,20,["#d7fff0","#ffe5a0","#a8e9df"]);collectStar();}dragging=false}
 canvas.addEventListener("pointerup",stopDrag);canvas.addEventListener("pointercancel",()=>{dragging=false});canvas.addEventListener("lostpointercapture",()=>{dragging=false});
 
 $("enterButton").addEventListener("click",()=>{$("intro").classList.remove("open");burst(CX,TOP,65,["#ffe5a0","#a9f6df","#fff4d4"]);if(personalGift)setTimeout(openGift,1050)});
-$("wishButton").addEventListener("click",()=>{burst(CX,TOP-12,95,["#ffe5a0","#a9f6df","#fff4d0"]);starTotal++;$("starCount").textContent="✦ 已收集 "+starTotal+" 颗星光";chime();toast("愿望已化作一颗星光，飞向冬夜 ✨")});
-$("musicButton").addEventListener("click",toggleSound);
+$("wishButton").addEventListener("click",()=>{burst(CX,TOP-12,95,["#ffe5a0","#a9f6df","#fff4d0"]);collectStar();toast("愿望已化作一颗星光，飞向冬夜 ✨")});
 $("meteorButton").addEventListener("click",()=>{for(let i=0;i<38;i++)meteors.push({x:rand(20,W-20),y:rand(-130,H*.55),vx:rand(75,145),vy:rand(180,320),life:rand(.65,1.25),width:rand(1,2.4)});toast("抬头看看，流星雨来啦 ☄")});
 
 function openPanel(open){$("settingsPanel").classList.toggle("open",open);$("settingsPanel").setAttribute("aria-hidden",open?"false":"true")}
@@ -284,7 +359,7 @@ function showCompose(show){$("giftView").classList.toggle("hidden",show);$("comp
 function openGift(){openPanel(false);$("giftModal").classList.add("open");$("giftModal").setAttribute("aria-hidden","false");$("giftBox").classList.remove("opened");$("letter").classList.add("hidden");showCompose(false);displayLetter(personalGift||{message:"愿你的冬天有温暖相伴，愿新的一年有星光引路。愿所有期待都如约而至，圣诞快乐！",from:"来自冬夜的祝福"})}
 function closeGift(){$("giftModal").classList.remove("open");$("giftModal").setAttribute("aria-hidden","true")}
 $("giftButton").addEventListener("click",openGift);$("closeGift").addEventListener("click",closeGift);$("giftModal").addEventListener("click",e=>{if(e.target===$("giftModal"))closeGift()});
-$("unwrapButton").addEventListener("click",()=>{if($("giftBox").classList.contains("opened"))return;$("giftBox").classList.add("opened");setTimeout(()=>$("letter").classList.remove("hidden"),360);burst(CX,TOP+190,75,["#ffe5a0","#a9f6df","#fff4d4"]);chime();toast("礼物打开啦，愿这份祝福陪伴你 ✨")});
+$("unwrapButton").addEventListener("click",()=>{if($("giftBox").classList.contains("opened"))return;$("giftBox").classList.add("opened");setTimeout(()=>$("letter").classList.remove("hidden"),360);burst(CX,TOP+190,75,["#ffe5a0","#a9f6df","#fff4d4"]);toast("礼物打开啦，愿这份祝福陪伴你 ✨")});
 $("makeGiftButton").addEventListener("click",()=>showCompose(true));$("backToGift").addEventListener("click",()=>showCompose(false));
 function updatePreview(){const d=giftText();$("cardPreview").textContent=(d.to?"致 "+d.to+"：\n":"")+d.message+(d.from?"\n\n—— "+d.from:"")}
 ["recipient","sender","greeting"].forEach(id=>$(id).addEventListener("input",updatePreview));
@@ -302,7 +377,7 @@ if(params.has("gift")||params.has("msg")||params.has("to")){
  personalGift={to:params.get("to")||"",from:params.get("from")||"",message:params.get("msg")||"愿你的冬天有温暖相伴，愿新的一年有星光引路。圣诞快乐！"};
  displayLetter(personalGift);
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeGift();openPanel(false)}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeGift();closeWishJar();openPanel(false)}});
 })();
 </script>
 </body>
