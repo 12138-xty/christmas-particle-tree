@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030814">
+  <meta name="description" content="一棵会生长、闪烁、飘雪的蓝绿色粒子圣诞树。拖动旋转，许下心愿。">
+  <title>星愿圣诞树 · A Little Christmas Magic</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      background: #030814; color: #f5f0df;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body { position: fixed; inset: 0; touch-action: none; user-select: none; }
+    #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
+    .heading {
+      position: absolute; top: max(27px, env(safe-area-inset-top)); left: 0; right: 0;
+      text-align: center; letter-spacing: .34em; padding-left: .34em;
+      color: rgba(180, 222, 213, .72); font-size: 10px; font-weight: 500;
+      text-shadow: 0 0 18px rgba(72, 219, 194, .3);
+    }
+    .heading strong {
+      display: block; margin-top: 10px; font-family: Georgia, serif;
+      font-size: clamp(19px, 5vw, 27px); letter-spacing: .23em; padding-left: .23em;
+      font-weight: 400; color: #f5e9c7;
+      text-shadow: 0 0 22px rgba(248, 206, 126, .23);
+    }
+    .footer {
+      position: absolute; bottom: max(27px, env(safe-area-inset-bottom));
+      left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 12px;
+      pointer-events: auto;
+    }
+    #wishButton {
+      appearance: none; border: 1px solid rgba(232, 197, 123, .65);
+      color: #f6e5b9; background: linear-gradient(135deg, rgba(17, 54, 59, .88), rgba(8, 22, 37, .92));
+      border-radius: 999px; padding: 13px 29px; min-width: 174px;
+      font-size: 14px; letter-spacing: .16em; cursor: pointer;
+      box-shadow: 0 0 24px rgba(58, 197, 171, .12), inset 0 0 16px rgba(255, 220, 150, .05);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    #wishButton:active { transform: scale(.96); box-shadow: 0 0 32px rgba(255, 205, 112, .28); }
+    .hint { margin: 0; color: rgba(183, 207, 203, .62); font-size: 11px; letter-spacing: .12em; }
+    .toast {
+      position: absolute; left: 50%; bottom: max(100px, calc(env(safe-area-inset-bottom) + 92px));
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+      padding: 10px 18px; border: 1px solid rgba(234, 202, 135, .28);
+      border-radius: 999px; color: #f7e7c1; background: rgba(5, 22, 31, .82);
+      font-size: 12px; letter-spacing: .08em; white-space: nowrap;
+      box-shadow: 0 0 28px rgba(255, 196, 104, .12);
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .signature {
+      position: absolute; bottom: max(9px, env(safe-area-inset-bottom));
+      color: rgba(106, 153, 151, .34); font: 9px Georgia, serif; letter-spacing: .2em;
+    }
+    @media (max-height: 690px) {
+      .heading { top: max(15px, env(safe-area-inset-top)); }
+      .heading strong { margin-top: 6px; }
+      .footer { bottom: max(13px, env(safe-area-inset-bottom)); gap: 7px; }
+      #wishButton { padding: 10px 24px; }
+      .hint { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene" aria-label="蓝绿色粒子圣诞树动画"></canvas>
+  <div class="ui">
+    <div class="heading">A LITTLE CHRISTMAS MAGIC<strong>MERRY CHRISTMAS</strong></div>
+    <div class="footer">
+      <button id="wishButton" type="button">✦ 许下心愿 ✦</button>
+      <p class="hint">轻轻拖动，旋转这棵星光圣诞树</p>
+    </div>
+    <div class="toast" id="toast">愿望已化作一颗星光 ✨</div>
+    <div class="signature">MADE OF A LITTLE MAGIC</div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("scene");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const wishButton = document.getElementById("wishButton");
+      const toast = document.getElementById("toast");
+
+      const W = 700, H = 880, CX = 350, TOP = 154, TREE_H = 573, MAX_R = 267;
+      const TAU = Math.PI * 2;
+      const rand = (a, b) => a + Math.random() * (b - a);
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const smoothstep = (v) => v * v * (3 - 2 * v);
+
+      let dpr = 1, sx = 1, sy = 1;
+      let rotation = 0, dragging = false, lastX = 0;
+      let startTime = performance.now(), lastFrame = 0;
+      let wishParticles = [], wishPulse = 0, toastTimer = 0;
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(window.innerWidth * dpr);
+        canvas.height = Math.round(window.innerHeight * dpr);
+        sx = window.innerWidth / W;
+        sy = window.innerHeight / H;
+        ctx.setTransform(dpr * sx, 0, 0, dpr * sy, 0, 0);
+      }
+      window.addEventListener("resize", resize, { passive: true });
+      resize();
+
+      function hex(r, g, b) {
+        return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
+      }
+      function blend(a, b, t) {
+        return [
+          a[0] * (1 - t) + b[0] * t,
+          a[1] * (1 - t) + b[1] * t,
+          a[2] * (1 - t) + b[2] * t
+        ];
+      }
+      function gaussian() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+      }
+
+      const dark = [8, 74, 83], aqua = [34, 190, 177], ice = [161, 248, 218];
+      const leaves = [];
+      for (let i = 0; i < 5100; i++) {
+        const u = Math.pow(Math.random(), 0.85);
+        const angle = rand(0, TAU);
+        let radius = MAX_R * Math.pow(u, 0.88) * Math.sqrt(Math.random());
+        const band = Math.sin(u * Math.PI * 34 + angle * 2.1);
+        radius *= 0.95 + 0.075 * band;
+        const x = radius * Math.cos(angle) + gaussian() * 3;
+        const z = radius * Math.sin(angle);
+        const y = TOP + TREE_H * u + z * 0.12 + gaussian() * 3.4;
+        const size = Math.random() < 0.60 ? 1.1 : (Math.random() < 0.85 ? 1.8 : 2.5);
+        const bright = rand(0.55, 1.2);
+        const phase = rand(0, TAU);
+        const speed = rand(0.5, 2.1);
+        const colorMix = Math.random();
+        let color = blend(dark, aqua, clamp(0.23 + clamp(bright) * 0.82, 0, 1));
+        if (colorMix > 0.88) color = blend(color, ice, 0.58);
+        leaves.push({ u, x, z, y, size, bright, phase, speed, color: hex(color[0], color[1], color[2]) });
+      }
+
+      for (let k = 0; k < 170; k++) {
+        const u = rand(0.08, 0.98);
+        const angle = rand(0, TAU);
+        const length = MAX_R * Math.pow(u, 0.9);
+        for (let j = 0; j < 10; j++) {
+          const rr = length * rand(0.66, 1.07);
+          const a = angle + gaussian() * 0.042;
+          const x = rr * Math.cos(a);
+          const z = rr * Math.sin(a);
+          const y = TOP + TREE_H * u + z * 0.12 + gaussian() * 4.2;
+          const color = Math.random() > 0.5 ? "rgb(48,190,174)" : "rgb(91,218,192)";
+          leaves.push({ u, x, z, y, size: Math.random() < 0.7 ? 1.2 : 1.8, bright: rand(0.6, 1.2), phase: rand(0, TAU), speed: rand(0.5, 2.1), color });
+        }
+      }
+
+      const ornaments = [];
+      for (let i = 0; i < 28; i++) {
+        const u = rand(0.24, 0.93);
+        const rr = MAX_R * Math.pow(u, 0.9) * rand(0.18, 0.77);
+        const a = rand(0, TAU);
+        const palette = ["#e14249", "#f7b449", "#d8f0ee"];
+        ornaments.push({ u, x: rr * Math.cos(a), z: rr * Math.sin(a), y: TOP + TREE_H * u + rr * Math.sin(a) * 0.12, color: palette[Math.floor(Math.random() * palette.length)] });
+      }
+
+      const snow = Array.from({ length: 130 }, () => ({
+        x: rand(0, W), y: rand(0, H), speed: rand(10, 44),
+        r: Math.random() < 0.76 ? 1 : 2, alpha: rand(0.4, 1)
+      }));
+      const skyStars = Array.from({ length: 155 }, () => ({
+        x: rand(0, W), y: rand(0, H), r: Math.random() < 0.7 ? 1 : 2, alpha: rand(0.15, 0.7)
+      }));
+
+      function project(x, z, y, angle) {
+        const c = Math.cos(angle), s = Math.sin(angle);
+        const px = x * c + z * s;
+        const depth = -x * s + z * c;
+        return { x: CX + px, y: y + depth * 0.12, depth };
+      }
+
+      function drawBackground(t) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, H);
+        gradient.addColorStop(0, "#030814");
+        gradient.addColorStop(0.56, "#061523");
+        gradient.addColorStop(1, "#081b28");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, W, H);
+
+        const halo = ctx.createRadialGradient(CX, 485, 12, CX, 485, 365);
+        halo.addColorStop(0, "rgba(9,92,91,0.30)");
+        halo.addColorStop(0.52, "rgba(5,53,66,0.18)");
+        halo.addColorStop(1, "rgba(3,8,20,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(0, 170, W, 650);
+
+        const floor = ctx.createRadialGradient(CX, 735, 2, CX, 735, 270);
+        floor.addColorStop(0, "rgba(26,142,119,0.16)");
+        floor.addColorStop(1, "rgba(3,8,20,0)");
+        ctx.fillStyle = floor;
+        ctx.fillRect(60, 620, 580, 220);
+
+        for (const star of skyStars) {
+          const twinkle = 0.55 + 0.45 * Math.sin(t * 0.7 + star.x * 0.2);
+          ctx.globalAlpha = star.alpha * twinkle;
+          ctx.fillStyle = "#8eddd2";
+          ctx.fillRect(star.x, star.y, star.r, star.r);
+        }
+        ctx.globalAlpha = 1;
+
+        for (const flake of snow) {
+          const x = (flake.x + Math.sin(t * 0.55 + flake.y * 0.05) * 9) % W;
+          const y = (flake.y + flake.speed * t) % H;
+          ctx.globalAlpha = flake.alpha * 0.75;
+          ctx.fillStyle = "#b9e7e9";
+          ctx.beginPath();
+          ctx.arc(x, y, flake.r, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawRibbon(t, eased, angle, front) {
+        const count = 1450;
+        for (let j = 0; j < count; j++) {
+          const z = 0.025 + 0.96 * j / (count - 1);
+          if (z > eased) continue;
+          if (Math.sin(j * 2.31 + t * 4.7) <= -0.76) continue;
+          const a = TAU * 5.4 * z - 1.5 + 0.22 * Math.sin(t * 0.32);
+          const radius = MAX_R * Math.pow(z, 0.88) * 1.02;
+          let x = radius * Math.cos(a) + Math.sin(j * 7.83) * 3.6 + Math.sin(j * 2.4 + t * 2) * 2.5;
+          let zz = radius * Math.sin(a);
+          const p = project(x, zz, TOP + TREE_H * z + Math.cos(j * 4.12) * 2.1, angle);
+          const isFront = p.depth > -3;
+          if (isFront !== front) continue;
+          const glow = 0.6 + 0.4 * Math.sin(t * 2.8 + j * 0.043);
+          const alpha = clamp((0.48 + glow * 0.48) * (front ? 1 : 0.58), 0, 1);
+          const r = j % 6 === 0 ? 2.15 : 1.45;
+          if (j % 12 === 0) {
+            ctx.globalAlpha = alpha * 0.22;
+            ctx.fillStyle = "#ffbd58";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r * 2.8, 0, TAU);
+            ctx.fill();
+          }
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = j % 31 === 0 ? "#fff0bd" : "#f5c36e";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawLeaves(t, eased, angle) {
+        for (let pass = 0; pass < 2; pass++) {
+          for (const leaf of leaves) {
+            if (leaf.u > eased) continue;
+            const p = project(
+              leaf.x + Math.sin(t * 0.8 + leaf.phase + leaf.u * 10) * 1.7,
+              leaf.z,
+              leaf.y + Math.cos(t * 0.6 + leaf.phase) * 1.3,
+              angle
+            );
+            if ((p.depth > 0 ? 1 : 0) !== pass) continue;
+            const twinkle = 0.62 + 0.38 * Math.sin(t * leaf.speed * 2 + leaf.phase);
+            const depthScale = 0.82 + 0.22 * (p.depth / MAX_R + 1) / 2;
+            ctx.globalAlpha = clamp((0.66 + 0.34 * twinkle) * (0.76 + 0.24 * depthScale), 0, 1);
+            ctx.fillStyle = leaf.color;
+            const size = leaf.size * (0.78 + 0.22 * twinkle) * depthScale;
+            ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawOrnaments(eased, angle) {
+        for (const item of ornaments) {
+          if (item.u > eased) continue;
+          const p = project(item.x, item.z, item.y, angle);
+          ctx.globalAlpha = 0.26;
+          ctx.fillStyle = item.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, TAU); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = item.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, item.color === "#d8f0ee" ? 2.5 : 3.5, 0, TAU); ctx.fill();
+          ctx.fillStyle = "rgba(255,250,225,0.9)";
+          ctx.beginPath(); ctx.arc(p.x - 1.2, p.y - 1.5, 1.1, 0, TAU); ctx.fill();
+        }
+      }
+
+      function starPath(x, y, outer, inner) {
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = -Math.PI / 2 + i * Math.PI / 5;
+          const r = i % 2 === 0 ? outer : inner;
+          const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+
+      function drawTopStar(t, eased) {
+        if (eased <= 0.02) return;
+        const pulse = 0.92 + 0.08 * Math.sin(t * 4);
+        const glow = ctx.createRadialGradient(CX, TOP - 12, 1, CX, TOP - 12, 58 * pulse);
+        glow.addColorStop(0, "rgba(255,238,177,0.50)");
+        glow.addColorStop(0.28, "rgba(255,206,112,0.19)");
+        glow.addColorStop(1, "rgba(255,190,90,0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(CX - 65, TOP - 80, 130, 130);
+        ctx.fillStyle = "#ffe08b";
+        starPath(CX, TOP - 12, 22 * pulse, 9 * pulse);
+        ctx.fill();
+        ctx.fillStyle = "#fffbe0";
+        starPath(CX, TOP - 12, 12 * pulse, 5 * pulse);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,211,123,0.75)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(CX - 32, TOP - 12); ctx.lineTo(CX + 32, TOP - 12);
+        ctx.moveTo(CX, TOP - 46); ctx.lineTo(CX, TOP + 23);
+        ctx.stroke();
+      }
+
+      function drawGround(eased, t) {
+        if (eased <= 0.5) return;
+        const a = (eased - 0.5) * 2;
+        for (let j = 0; j < 55; j++) {
+          const x = 130 + j * 8;
+          const y = TOP + TREE_H + Math.sin(j * 1.33 + t * 0.3) * 3;
+          const c = Math.round(30 * a * (1 - Math.abs(x - CX) / 360));
+          ctx.globalAlpha = 0.7;
+          ctx.fillStyle = "rgb(" + c + "," + Math.max(1, Math.round(c * 0.67)) + ",4)";
+          ctx.beginPath(); ctx.arc(x, y, 2, 0, TAU); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        if (eased > 0.94) {
+          ctx.textAlign = "center";
+          ctx.font = "21px Georgia, serif";
+          ctx.fillStyle = "rgba(193,179,128,0.92)";
+          ctx.fillText("M E R R Y   C H R I S T M A S", CX, 788);
+          ctx.font = "11px Georgia, serif";
+          ctx.fillStyle = "rgba(105,157,157,0.8)";
+          ctx.fillText("MAY YOUR WISHES FIND THEIR WAY", CX, 830);
+        }
+      }
+
+      function drawWishParticles(dt) {
+        for (let i = wishParticles.length - 1; i >= 0; i--) {
+          const p = wishParticles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vx *= 0.985; p.vy *= 0.985;
+          p.life -= dt * 0.72;
+          if (p.life <= 0) { wishParticles.splice(i, 1); continue; }
+          ctx.globalAlpha = p.life;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * (0.6 + p.life * 0.6), 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function render(now) {
+        const dt = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0.016;
+        lastFrame = now;
+        const t = (now - startTime) / 1000;
+        const eased = smoothstep(clamp(t / 3.4, 0, 1));
+        const angle = rotation + Math.sin(t * 0.18) * 0.035;
+
+        drawBackground(t);
+        drawRibbon(t, eased, angle, false);
+        drawLeaves(t, eased, angle);
+        drawRibbon(t, eased, angle, true);
+        drawOrnaments(eased, angle);
+        drawTopStar(t, eased);
+        drawGround(eased, t);
+        drawWishParticles(dt);
+
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+
+      canvas.addEventListener("pointerdown", function (event) {
+        dragging = true;
+        lastX = event.clientX;
+        canvas.setPointerCapture(event.pointerId);
+      });
+      canvas.addEventListener("pointermove", function (event) {
+        if (!dragging) return;
+        const dx = event.clientX - lastX;
+        rotation += dx * 0.008;
+        lastX = event.clientX;
+      });
+      function stopDragging() { dragging = false; }
+      canvas.addEventListener("pointerup", stopDragging);
+      canvas.addEventListener("pointercancel", stopDragging);
+      canvas.addEventListener("lostpointercapture", stopDragging);
+
+      wishButton.addEventListener("click", function () {
+        const now = performance.now();
+        wishPulse = now;
+        for (let i = 0; i < 72; i++) {
+          const a = rand(0, TAU), speed = rand(45, 210);
+          wishParticles.push({
+            x: CX, y: TOP - 12, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+            life: rand(0.75, 1.35), size: rand(1.2, 3.1),
+            color: Math.random() > 0.22 ? "#ffe5a0" : "#a9f6df"
+          });
+        }
+        toast.classList.add("show");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 2300);
+      });
+    })();
+  </script>
+</body>
+</html>
